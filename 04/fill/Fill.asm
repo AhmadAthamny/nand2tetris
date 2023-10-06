@@ -36,3 +36,39 @@
 //   interactively by pressing and releasing some keyboard keys
 
 // Put your code here.
+(LOOP)
+    @SCREEN
+    D = A
+    @i
+    M = D
+
+    (ITERATE)
+    @i
+    D = M
+    @24576
+    D = D - A
+    @LOOP
+    D;JEQ
+        
+    @KBD
+    D=M
+    @BLACK
+    D;JNE
+
+    @i
+    A = M
+    M = 0
+    @INCREASE
+    0;JMP
+
+    (BLACK)
+        @i
+        A = M
+        M = -1
+    (INCREASE)
+        @i
+        M=M+1
+        @ITERATE
+        0;JMP
+
+
