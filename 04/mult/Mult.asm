@@ -17,3 +17,33 @@
 // - You can implement any multiplication algorithm you want.
 
 // Put your code here.
+
+// Pseudocode:
+// Set R2 to 0.
+// Start a counter (i) to 0.
+// Start a loop:
+// - If i == R1: end
+// - Else: Add R0 to R2 and increase the counter.
+
+@R2
+M=0
+@i
+M=0
+D=M
+(LOOP)
+    @R1
+    D=D-M
+    @END
+    D;JEQ
+    @R0
+    D=M
+    @R2
+    M=D+M
+    @i
+    M=M+1
+    D=M
+    @LOOP
+    0;JMP
+(END)
+    @END
+    0;JMP
