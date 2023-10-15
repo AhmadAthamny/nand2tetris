@@ -23,5 +23,19 @@ CHIP ExtendAlu {
      OUT out[16], zr, ng;
      
      PARTS:
-     // Put your code here:
+     ALU(x=x, y=y, zx=instruction[5], nx=instruction[4], zy=instruction[3], ny=instruction[2], f=instruction[1], no=instruction[0], out=regout, zr=regzr, ng=regng);
+     Nand(a=instruction[8], b=instruction[7], out=newalu);
+
+     Mux16(a=y, b=x, sel=instruction[4], out=toshift);
+     ShiftRight(in=toshift, out=rightshift);
+     ShiftLeft(in=toshift, out=leftshift);
+     Mux16(a=rightshift, b=leftshift, sel=instruction[5], out[0..7]=newout1, out[8..15]=newout2, out[15]=isneg);
+     Or8Way(in=newout1, out=newzr1);
+     Or8Way(in=newout2, out=newzr2);
+     Or(a=newzr1, b=newzr2, out=checknewzr);
+     Not(in=checknewzr, out=newzr);
+
+     Mux(a=regzr, b=newzr, sel=newalu, out=zr);
+     Mux(a=regng, b=isneg, sel=newalu, out=ng);
+     Mux16(a=regout, b[0..7]=newout1, b[8..15]=newout2, sel=newalu, out=out);
 }
