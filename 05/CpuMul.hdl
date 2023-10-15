@@ -38,5 +38,31 @@ CHIP CpuMul {
         pc[15];          // address of next instruction
     
     PARTS:
-    // Put your code here:
+    // Sel and load pins.
+    And(a=instruction[15], b=instruction[5], out=cinstrload);
+    Not(in=instruction[15], out=ainstruction);
+    Or(a=ainstruction, b=cinstrload, out=loada);
+    And(a=instruction[15], b=instruction[4], out=loadd);
+    And(a=instruction[15], b=instruction[3], out=writeM);
+
+    // Getting the correct output from the ARegister
+    Mux16(a=aluout, b=instruction, sel=ainstruction, out=ainput);
+    ARegister(in=ainput, load=loada, out=aoutput, out[0..14]=addressM);
+
+    // Passing pins to the ExtendAlu chip.
+    Mux16(a=aoutput, b=inM, sel=instruction[12], out=ypin);
+    DRegister(in=aluout, load=loadd, out=doutput);
+    ExtendAlu(x=doutput, y=ypin, instruction=instruction[6..14], out=outM, out=aluout, zr=zrout, ng=ngout);
+
+    // Calculating the new PC value (reset/load/inc..)
+    And(a=zrout, b=instruction[1], out=jmpzero);
+    And(a=ngout, b=instruction[2], out=jmpneg);
+    Or(a=zrout, b=ngout, out=zeroneg);
+    Not(in=zeroneg, out=positive);
+    And(a=positive, b=instruction[0], out=jmppos);
+    Or(a=jmpzero, b=jmpneg, out=jmpzeroneg);
+    Or(a=jmpzeroneg, b=jmppos, out=jumpcond);
+    And(a=jumpcond, b=instruction[15], out=dojump);
+
+    PC(in=aoutput, load=dojump, inc=true, reset=reset, out[0..14]=pc);
 }
