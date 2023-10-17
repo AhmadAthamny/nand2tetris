@@ -21,10 +21,19 @@ class Parser:
         Args:
             input_file (typing.TextIO): input file.
         """
-        # Your code goes here!
-        # A good place to start is to read all the lines of the input:
-        # input_lines = input_file.read().splitlines()
-        pass
+        self.__input_lines = input_file.read().splitlines()
+        for i in range(len(self.__input_lines)):
+
+            # Remove any space in the line.
+            self.__input_lines[i] = self.__input_lines[i].replace(" ", "")
+
+            # Check for a comment in the line, and remove starting from it.
+            comment_index = self.__input_lines[i].find("//")
+            if comment_index != -1:
+                self.__input_lines[i] = self.__input_lines[i][:comment_index] # excludes the //
+
+        # A pointer to which line in the file we are in.
+        self.__reached = -1
 
     def has_more_commands(self) -> bool:
         """Are there more commands in the input?
@@ -32,15 +41,31 @@ class Parser:
         Returns:
             bool: True if there are more commands, False otherwise.
         """
-        # Your code goes here!
-        pass
+        for n in range(self.__reached+1, len(self.__input_lines)):
+
+            # Empty line check
+            if len(self.__input_lines[n]) == 0:
+                continue
+
+            return True
+        return False
 
     def advance(self) -> None:
         """Reads the next command from the input and makes it the current command.
         Should be called only if has_more_commands() is true.
         """
-        # Your code goes here!
-        pass
+        n = self.__reached
+        while True:
+            n += 1
+            if len(self.__input_lines[n]) == 0:
+                continue
+            if self.__input_lines[n][0:2] == "//":
+                continue
+            break
+        self.__reached = n
+
+    def reset_to_top(self) -> None:
+        self.__reached = -1
 
     def command_type(self) -> str:
         """
@@ -50,8 +75,14 @@ class Parser:
             "C_COMMAND" for dest=comp;jump
             "L_COMMAND" (actually, pseudo-command) for (Xxx) where Xxx is a symbol
         """
-        # Your code goes here!
-        pass
+        cur_cmd = self.__input_lines[self.__reached]
+        if cur_cmd[0] == '@':
+            return "A_COMMAND"
+        if cur_cmd[0] == '(':
+            return "L_COMMAND"
+        else:
+            return "C_COMMAND"
+
 
     def symbol(self) -> str:
         """
@@ -60,8 +91,12 @@ class Parser:
             (Xxx). Should be called only when command_type() is "A_COMMAND" or 
             "L_COMMAND".
         """
-        # Your code goes here!
-        pass
+        cur_cmd = self.__input_lines[self.__reached]
+        if self.command_type() == "A_COMMAND":
+            return cur_cmd[1:]
+        else:
+            return cur_cmd[1:-1]
+        
 
     def dest(self) -> str:
         """
@@ -69,8 +104,13 @@ class Parser:
             str: the dest mnemonic in the current C-command. Should be called 
             only when commandType() is "C_COMMAND".
         """
-        # Your code goes here!
-        pass
+        cur_cmd = self.__input_lines[self.__reached]
+        if '=' not in cur_cmd:
+            return "null"
+        
+        index = cur_cmd.find("=")
+        return cur_cmd[0:index]
+        
 
     def comp(self) -> str:
         """
@@ -78,8 +118,14 @@ class Parser:
             str: the comp mnemonic in the current C-command. Should be called 
             only when commandType() is "C_COMMAND".
         """
-        # Your code goes here!
-        pass
+        cur_cmd = self.__input_lines[self.__reached]
+        start_index = cur_cmd.find("=") + 1
+        comma_index = cur_cmd.find(";")
+
+        if comma_index != -1:
+            return cur_cmd[start_index:comma_index]
+        else:
+            return cur_cmd[start_index:]
 
     def jump(self) -> str:
         """
@@ -87,5 +133,9 @@ class Parser:
             str: the jump mnemonic in the current C-command. Should be called 
             only when commandType() is "C_COMMAND".
         """
-        # Your code goes here!
-        pass
+        cur_cmd = self.__input_lines[self.__reached]
+        comma_index = cur_cmd.find(";")
+        if comma_index == -1:
+            return "null"
+        return cur_cmd[comma_index+1:]
+

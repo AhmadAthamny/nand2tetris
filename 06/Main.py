@@ -21,12 +21,61 @@ def assemble_file(
         input_file (typing.TextIO): the file to assemble.
         output_file (typing.TextIO): writes all output to this file.
     """
-    # Your code goes here!
-    # A good place to start is to initialize a new Parser object:
-    # parser = Parser(input_file)
-    # Note that you can write to output_file like so:
-    # output_file.write("Hello world! \n")
-    pass
+    # initializing the symbol table
+    symbol_table = SymbolTable()
+
+    # creating the parser object
+    parser = Parser(input_file)
+    
+    # current available index at the ROM
+    rom_index = 0
+
+    # first pass
+    while parser.has_more_commands():
+        parser.advance()
+        if parser.command_type() == "L_COMMAND":
+            ins_symbol = parser.symbol()
+            symbol_table.add_entry(ins_symbol, rom_index)
+        else:
+            rom_index += 1
+
+    # reset parser to read from the beginning of the program
+    parser.reset_to_top()
+
+    # second pass
+    address_available = 16
+    while parser.has_more_commands():
+        parser.advance()
+
+        # Parse A-Instruction
+        if parser.command_type() == "A_COMMAND":
+
+            # Get the address
+            ins_symbol = parser.symbol()
+            if not ins_symbol.isnumeric():
+                if symbol_table.contains(ins_symbol):
+                    a_address = symbol_table.get_address(ins_symbol)
+                else:
+                    symbol_table.add_entry(ins_symbol, address_available)
+                    a_address = address_available
+                    address_available += 1
+            else:
+                a_address = ins_symbol
+
+            # We write to ROM the binary value of a_address
+            a_address = int(a_address)
+            to_rom = format(a_address, "b").zfill(16)
+
+        # Parse C-Instruction 
+        elif parser.command_type() == "C_COMMAND":
+            to_rom = Code.comp(parser.comp())  # parse the computation
+            to_rom += Code.dest(parser.dest())  # parse the dest
+            to_rom += Code.jump(parser.jump())  # parse the jump
+
+        else:
+            continue
+        output_file.write(to_rom + "\n")
+
 
 
 if "__main__" == __name__:
