@@ -52,10 +52,45 @@ class Parser:
         Args:
             input_file (typing.TextIO): input file.
         """
-        # Your code goes here!
-        # A good place to start is to read all the lines of the input:
-        # input_lines = input_file.read().splitlines()
-        pass
+
+        # read all lines, split each line in a seperated element in a list
+        self.__input_lines = input_file.read().splitlines()
+
+        # tuple structure: ("COMMAND_TEXT", "ARG_1", "ARG_2", ...)
+        self.__commands = []  # each tuple is a command.
+
+        for i in range(len(self.__input_lines)):
+
+            # remove comment if exists
+            comment_start = self.__input_lines[i].find("//")
+            if comment_start != -1:
+                self.__input_lines[i] = self.__input_lines[i][:comment_start]
+
+            # remove extra whitespace at the beginning and at the end
+            self.__input_lines[i] = self.__input_lines[i].strip()
+
+            # split the command into elements
+            # skip line if it is empty at this point
+            command_splitted = self.__input_lines[i].split()
+            if len(command_splitted) == 0:
+                continue
+
+            # parse the line into commands (in case one line can have more than one command)
+            elem = 0
+            while elem < len(command_splitted):
+                arg_amount = self.__get_arg_amount(command_splitted[elem])
+                command = tuple(arg for arg in command_splitted[elem:arg_amount+1])
+                self.__commands.append(command)
+                elem += arg_amount + 1
+
+        self.__current_command = -1
+
+    def __get_arg_amount(self, keyword: str) -> int:
+        if keyword in {"add", "sub", "and", "or", "eq", "gt", "lt", "neg",
+                        "not", "shiftleft", "shiftright"}:
+            return 0
+        elif keyword in {"push", "pop"}:
+            return 2
 
     def has_more_commands(self) -> bool:
         """Are there more commands in the input?
@@ -63,16 +98,14 @@ class Parser:
         Returns:
             bool: True if there are more commands, False otherwise.
         """
-        # Your code goes here!
-        pass
+        return self.__current_command + 1 < len(self.__commands)
 
     def advance(self) -> None:
         """Reads the next command from the input and makes it the current 
         command. Should be called only if has_more_commands() is true. Initially
         there is no current command.
         """
-        # Your code goes here!
-        pass
+        self.__current_command += 1
 
     def command_type(self) -> str:
         """
@@ -83,8 +116,14 @@ class Parser:
             "C_PUSH", "C_POP", "C_LABEL", "C_GOTO", "C_IF", "C_FUNCTION",
             "C_RETURN", "C_CALL".
         """
-        # Your code goes here!
-        pass
+        cur_cmd = self.__commands[self.__current_command][0]
+        if cur_cmd in {"add", "sub", "and", "or", "eq", "gt", "lt",
+                       "neg", "not", "shiftleft", "shiftright"}:
+            return "C_ARITHMETIC"
+        elif cur_cmd == "push":
+            return "C_PUSH"
+        elif cur_cmd == "pop":
+            return "C_POP"
 
     def arg1(self) -> str:
         """
@@ -93,9 +132,12 @@ class Parser:
             "C_ARITHMETIC", the command itself (add, sub, etc.) is returned. 
             Should not be called if the current command is "C_RETURN".
         """
-        # Your code goes here!
-        pass
-
+        cur_cmd_tuple = self.__commands[self.__current_command]
+        if self.command_type() == "C_ARITHMETIC":
+            return cur_cmd_tuple[0]
+        else:
+            return cur_cmd_tuple[1]
+        
     def arg2(self) -> int:
         """
         Returns:
@@ -103,5 +145,6 @@ class Parser:
             called only if the current command is "C_PUSH", "C_POP", 
             "C_FUNCTION" or "C_CALL".
         """
-        # Your code goes here!
-        pass
+        
+        cur_cmd_tuple = self.__commands[self.__current_command]
+        return cur_cmd_tuple[2]

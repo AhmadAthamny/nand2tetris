@@ -17,11 +17,8 @@ class CodeWriter:
         Args:
             output_stream (typing.TextIO): output stream.
         """
-        # Your code goes here!
-        # Note that you can write to output_stream like so:
-        # output_stream.write("Hello world! \n")
-        pass
-
+        self.__output_file = output_stream
+        self.__lbl_ctr = -1
     def set_file_name(self, filename: str) -> None:
         """Informs the code writer that the translation of a new VM file is 
         started.
@@ -29,18 +26,91 @@ class CodeWriter:
         Args:
             filename (str): The name of the VM file.
         """
-        # Your code goes here!
-        # This function is useful when translating code that handles the
-        # static segment. For example, in order to prevent collisions between two
-        # .vm files which push/pop to the static segment, one can use the current
-        # file's name in the assembly variable's name and thus differentiate between
-        # static variables belonging to different files.
-        # To avoid problems with Linux/Windows/MacOS differences with regards
-        # to filenames and paths, you are advised to parse the filename in
-        # the function "translate_file" in Main.py using python's os library,
-        # For example, using code similar to:
-        # input_filename, input_extension = os.path.splitext(os.path.basename(input_file.name))
-        pass
+        self.__file_name = filename
+
+    def __binaryFunc(self, operation):
+        return "@SP\n" + \
+                "M=M-1\n" + \
+                "A=M\n" + \
+                "D=M\n" + \
+                "@SP\n" + \
+                "M=M-1\n" + \
+                "A=M\n" + \
+                "M=M" + operation + "D\n" + \
+                "@SP\n" + \
+                "M=M+1\n"
+    
+    def __compareFunc(self, operation):
+        operation = "J" + operation.upper()
+        return "@SP\n" + \
+                "M=M-1\n" + \
+                "A=M\n" + \
+                "D=M\n" + \
+                "@R15\n" + \
+                "M=D\n" + \
+                "@SP\n" + \
+                "M=M-1\n" + \
+                "@R15\n" + \
+                "D=M\n" + \
+                "@YPos_" + self.__lbl_ctr + "\n" + \
+                "D;JGT\n" + \
+                "@SP\n" + \
+                "D=M\n" + \
+                "@YNegXPos_" + self.__lbl_ctr + "\n" + \
+                "D;JGT\n" + \
+                "@R15\n" + \
+                "D=M\n" + \
+                "@SP\n" + \
+                "A=M\n" + \
+                "D=D-M\n" + \
+                "@CHECK_" + self.__lbl_ctr + "\n" + \
+                "0;JMP\n" + \
+                "(YNegXPos_" + self.__lbl_ctr + ")\n" + \
+                "D=1\n" + \
+                "@CHECK_" + self.__lbl_ctr + "\n" + \
+                "0;JMP\n" + \
+                "(YPos_" + self.__lbl_ctr + ")\n" + \
+                "@SP\n" + \
+                "A=M\n" + \
+                "D=M\n" + \
+                "@YPosXPos_" + self.__lbl_ctr + "\n" + \
+                "D;JGT\n" + \
+                "D=-1\n" + \
+                "@CHECK_" + self.__lbl_ctr + "\n" + \
+                "0;JMP\n" + \
+                "(YPosXPos_" + self.__lbl_ctr + ")\n" + \
+                "@R15\n" + \
+                "D=M\n" + \
+                "@SP\n" + \
+                "A=M\n" + \
+                "D=M-D\n" + \
+                "@CHECK_" + self.__lbl_ctr + "\n" + \
+                "0;JMP\n" + \
+                "(CHECK_" + self.__lbl_ctr + ")\n" + \
+                "@COND_TRUE_" + self.__lbl_ctr + "\n" + \
+                "D;" + operation + "\n" + \
+                "@SP\n" + \
+                "A=M\n" + \
+                "M=0\n" + \
+                "@FINISH_" + self.__lbl_ctr + "\n" + \
+                "0;JMP\n" + \
+                "(COND_TRUE_" + self.__lbl_ctr + ")\n" + \
+                "@SP\n" + \
+                "A=M\n" + \
+                "M=-1\n" + \
+                "@FINISH_" + self.__lbl_ctr + "\n" + \
+                "0;JMP\n" + \
+                "(FINISH_" + self.__lbl_ctr + ")\n" + \
+                "@SP\n" + \
+                "M=M+1\n" 
+    
+    def __unaryFunc(self, operation):
+        return "@SP\n" + \
+                "M=M-1\n" + \
+                "A=M\n" + \
+                "M=" + operation + "\n" + \
+                "@SP\n" + \
+                "M=M+1\n"
 
     def write_arithmetic(self, command: str) -> None:
         """Writes assembly code that is the translation of the given 
@@ -51,8 +121,23 @@ class CodeWriter:
         Args:
             command (str): an arithmetic command.
         """
-        # Your code goes here!
-        pass
+        # to prevent mixing labels up
+        self.__lbl_ctr += 1
+
+        binary_dict = {"add": "+", "sub": "-", "and": "&", "or": "|"}
+        compare_set = {"eq", "gt", "lt"}
+        unary_dict = {"neg": "-M", "not": "!M", "shiftleft": "M<<", "shiftright": "M>>"}
+
+        if command in list(binary_dict.keys()):
+            output = self.__binaryFunc(binary_dict[command])
+        
+        elif command in compare_set:
+            output = self.__compareFunc(command)
+
+        elif command in list(unary_dict.keys()):
+            output = self.__unaryFunc(unary_dict[command])
+        
+        self.__output_file.write(output)
 
     def write_push_pop(self, command: str, segment: str, index: int) -> None:
         """Writes assembly code that is the translation of the given 

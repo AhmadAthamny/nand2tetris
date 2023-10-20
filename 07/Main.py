@@ -20,11 +20,14 @@ def translate_file(
         input_file (typing.TextIO): the file to translate.
         output_file (typing.TextIO): writes all output to this file.
     """
-    # Your code goes here!
-    # It might be good to start with something like:
-    # parser = Parser(input_file)
-    # code_writer = CodeWriter(output_file)
-    pass
+    parser = Parser(input_file)
+    code_writer = CodeWriter(output_file)
+    while parser.has_more_commands():
+        parser.advance()
+        c_type = parser.command_type()
+        if c_type == "C_ARITHMETIC":
+            cmd_text = parser.arg1()
+            code_writer.write_arithmetic(cmd_text)
 
 
 if "__main__" == __name__:
