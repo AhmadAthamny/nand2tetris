@@ -41,7 +41,7 @@ def translate_file(
         elif c_type == "C_PUSH" or c_type == "C_POP":
             segment = parser.arg1()
             index = parser.arg2()
-            code_writer.write_push_pop(c_type, segment, str(index))
+            code_writer.write_push_pop(c_type, segment, int(index))
 
 
 

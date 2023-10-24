@@ -262,7 +262,7 @@ class CodeWriter:
                 output = self.__pushIndex(location, str(index))
 
             elif segment == "pointer":
-                if index == 0:
+                if int(index) == 0:
                     output = self.__pushPointer("THIS")
                 else:
                     output = self.__pushPointer("THAT")
