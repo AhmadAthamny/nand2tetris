@@ -28,7 +28,7 @@ class CodeWriter:
         """
         self.__file_name = filename
 
-    def __binaryFunc(self, operation):
+    def __binaryFunc(self, operation) -> str:
         return "@SP\n" + \
                 "M=M-1\n" + \
                 "A=M\n" + \
@@ -40,8 +40,9 @@ class CodeWriter:
                 "@SP\n" + \
                 "M=M+1\n"
     
-    def __compareFunc(self, operation):
+    def __compareFunc(self, operation) -> str:
         operation = "J" + operation.upper()
+        cntr = str(self.__lbl_ctr)
         return "@SP\n" + \
                 "M=M-1\n" + \
                 "A=M\n" + \
@@ -52,65 +53,160 @@ class CodeWriter:
                 "M=M-1\n" + \
                 "@R15\n" + \
                 "D=M\n" + \
-                "@YPos_" + self.__lbl_ctr + "\n" + \
+                "@YPos_" + cntr + "\n" + \
                 "D;JGT\n" + \
                 "@SP\n" + \
                 "D=M\n" + \
-                "@YNegXPos_" + self.__lbl_ctr + "\n" + \
+                "@YNegXPos_" + cntr + "\n" + \
                 "D;JGT\n" + \
                 "@R15\n" + \
                 "D=M\n" + \
                 "@SP\n" + \
                 "A=M\n" + \
                 "D=D-M\n" + \
-                "@CHECK_" + self.__lbl_ctr + "\n" + \
+                "@CHECK_" + cntr + "\n" + \
                 "0;JMP\n" + \
-                "(YNegXPos_" + self.__lbl_ctr + ")\n" + \
+                "(YNegXPos_" + cntr + ")\n" + \
                 "D=1\n" + \
-                "@CHECK_" + self.__lbl_ctr + "\n" + \
+                "@CHECK_" + cntr + "\n" + \
                 "0;JMP\n" + \
-                "(YPos_" + self.__lbl_ctr + ")\n" + \
+                "(YPos_" + cntr + ")\n" + \
                 "@SP\n" + \
                 "A=M\n" + \
                 "D=M\n" + \
-                "@YPosXPos_" + self.__lbl_ctr + "\n" + \
+                "@YPosXPos_" + cntr + "\n" + \
                 "D;JGT\n" + \
                 "D=-1\n" + \
-                "@CHECK_" + self.__lbl_ctr + "\n" + \
+                "@CHECK_" + cntr + "\n" + \
                 "0;JMP\n" + \
-                "(YPosXPos_" + self.__lbl_ctr + ")\n" + \
+                "(YPosXPos_" + cntr + ")\n" + \
                 "@R15\n" + \
                 "D=M\n" + \
                 "@SP\n" + \
                 "A=M\n" + \
                 "D=M-D\n" + \
-                "@CHECK_" + self.__lbl_ctr + "\n" + \
+                "@CHECK_" + cntr + "\n" + \
                 "0;JMP\n" + \
-                "(CHECK_" + self.__lbl_ctr + ")\n" + \
-                "@COND_TRUE_" + self.__lbl_ctr + "\n" + \
+                "(CHECK_" + cntr + ")\n" + \
+                "@COND_TRUE_" + cntr + "\n" + \
                 "D;" + operation + "\n" + \
                 "@SP\n" + \
                 "A=M\n" + \
                 "M=0\n" + \
-                "@FINISH_" + self.__lbl_ctr + "\n" + \
+                "@FINISH_" + cntr + "\n" + \
                 "0;JMP\n" + \
-                "(COND_TRUE_" + self.__lbl_ctr + ")\n" + \
+                "(COND_TRUE_" + cntr + ")\n" + \
                 "@SP\n" + \
                 "A=M\n" + \
                 "M=-1\n" + \
-                "@FINISH_" + self.__lbl_ctr + "\n" + \
+                "@FINISH_" + cntr + "\n" + \
                 "0;JMP\n" + \
-                "(FINISH_" + self.__lbl_ctr + ")\n" + \
+                "(FINISH_" + cntr + ")\n" + \
                 "@SP\n" + \
                 "M=M+1\n" 
     
-    def __unaryFunc(self, operation):
+    def __unaryFunc(self, operation) -> str:
         return "@SP\n" + \
                 "M=M-1\n" + \
                 "A=M\n" + \
                 "M=" + operation + "\n" + \
                 "@SP\n" + \
                 "M=M+1\n"
+
+    def __addConstant(self, value: str) -> str:
+        """Adds the value to the stack, must be a non-negative value
+        Args:
+            value (int): the value to add.
+        """
+        return "@" + value + "\n" + \
+                "D=A\n" + \
+                "@SP\n" + \
+                "A=M\n" + \
+                "M=D\n" + \
+                "@SP\n" + \
+                "M=M+1\n"
+    
+    def __pushIndex(self, from_segment: str, index: str) -> str:
+        """Adds the value to the stack, from local/argument/this/that"""
+
+        if from_segment == "TMP":
+            read_source =   "@5\n" + \
+                            "D=A\n" + \
+                            "@" + index + "\n" + \
+                            "A=D+A\n"
+        else:
+            read_source =   "@" + index + "\n" + \
+                            "D=A\n" + \
+                            "@" + from_segment + "\n" + \
+                            "A=M+D\n" 
+            
+        return read_source + \
+                "D=M\n" + \
+                "@SP\n" + \
+                "A=M\n" + \
+                "M=D\n" + \
+                "@SP\n" + \
+                "M=M+1\n"
+    
+    def __popIndex(self, to_segment: str, index: str) -> str:
+        """Pops the last value from the stack, and adds it to the desired segment"""
+
+        if to_segment == "TMP":
+            # save index in case of segment is TMP
+            output =    "@" + index + "\n" + \
+                        "D=A\n" + \
+                        "@5\n" + \
+                        "D=D+A\n" 
+        else:
+            # save index in case of segment in {LCL, ARG, THIS, THAT}
+            output =    "@" + index + "\n" + \
+                        "D=A\n" + \
+                        "@" + to_segment + "\n" + \
+                        "D=M+D\n"
+            
+        return output + \
+        "@R13\n" + \
+        "M=D\n" + \
+        "@SP\n" + \
+        "M=M-1\n" + \
+        "A=M\n" + \
+        "D=M\n" + \
+        "@R13\n" + \
+        "A=M\n" + \
+        "M=D\n"
+    
+    def __pushPointer(self, segment: str) -> str:
+        return "@" + segment + "\n" + \
+        "D=M\n" + \
+        "@SP\n" + \
+        "A=M\n" + \
+        "M=D\n" + \
+        "@SP\n" + \
+        "M=M+1\n" 
+    
+    def __popPointer(self, segment: str) -> str:
+        return "@SP\n" + \
+        "AM=M-1\n" + \
+        "D=M\n" + \
+        "@" + segment + "\n" + \
+        "M=D\n"
+    
+    def __pushStatic(self, index: str) -> str:
+        var_name = self.__file_name + "." + index
+        return "@" + var_name + "\n" + \
+        "D=M\n" + \
+        "@SP\n" + \
+        "AM=M+1\n" + \
+        "A=A-1\n" + \
+        "M=D\n"
+
+    def __popStatic(self, index: str) -> str:
+        var_name = self.__file_name + "." + index
+        return "@SP\n" + \
+        "AM=M-1\n" + \
+        "D=M\n" + \
+        "@" + var_name + "\n" + \
+        "M=D\n" 
 
     def write_arithmetic(self, command: str) -> None:
         """Writes assembly code that is the translation of the given 
@@ -153,7 +249,46 @@ class CodeWriter:
         # be translated to the assembly symbol "Xxx.i". In the subsequent
         # assembly process, the Hack assembler will allocate these symbolic
         # variables to the RAM, starting at address 16.
-        pass
+
+        # Converting index to int
+        if command == 'C_PUSH':
+            if segment == 'constant':
+                output = self.__addConstant(str(index))
+
+            
+            elif segment in {"local", "argument", "this", "that", "temp"}:
+                location = {"local": "LCL", "argument": "ARG", "this": "THIS", 
+                            "that": "THAT", "temp": "TMP"}[segment]
+                output = self.__pushIndex(location, str(index))
+
+            elif segment == "pointer":
+                if index == 0:
+                    output = self.__pushPointer("THIS")
+                else:
+                    output = self.__pushPointer("THAT")
+
+            elif segment == "static":
+                output = self.__pushStatic(str(index))
+            
+    
+
+        elif command == 'C_POP':
+            if segment in {"local", "argument", "this", "that", "temp"}:
+                location = {"local": "LCL", "argument": "ARG", "this": "THIS", 
+                            "that": "THAT", "temp": "TMP"}[segment]
+                output = self.__popIndex(location, str(index))
+
+            elif segment == "pointer":
+                if index == 0:
+                    output = self.__popPointer("THIS")
+                else:
+                    output = self.__popPointer("THAT")
+
+            elif segment == "static":
+                output = self.__popStatic(str(index))
+
+        self.__output_file.write(output)
+
 
     def write_label(self, label: str) -> None:
         """Writes assembly code that affects the label command. 

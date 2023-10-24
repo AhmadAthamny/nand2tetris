@@ -22,12 +22,27 @@ def translate_file(
     """
     parser = Parser(input_file)
     code_writer = CodeWriter(output_file)
+
+    file_name = os.path.basename(input_file.name)[:-3]
+    code_writer.set_file_name(file_name)
+
     while parser.has_more_commands():
+
+        # Move to next command
         parser.advance()
         c_type = parser.command_type()
+
+        # In case of arithmetic function
         if c_type == "C_ARITHMETIC":
             cmd_text = parser.arg1()
             code_writer.write_arithmetic(cmd_text)
+
+        # In case of C_PUSH or C_POP
+        elif c_type == "C_PUSH" or c_type == "C_POP":
+            segment = parser.arg1()
+            index = parser.arg2()
+            code_writer.write_push_pop(c_type, segment, str(index))
+
 
 
 if "__main__" == __name__:
