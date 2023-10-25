@@ -19,7 +19,9 @@ class CodeWriter:
         """
         self.__output_file = output_stream
         self.__lbl_ctr = -1
-    def set_file_name(self, filename: str) -> None:
+
+
+    def setFileName(self, filename: str) -> None:
         """Informs the code writer that the translation of a new VM file is 
         started.
 
