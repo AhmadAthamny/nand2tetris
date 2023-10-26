@@ -50,7 +50,6 @@ def translate_file(
         elif c_type == "C_LABEL":
             lbl_str = parser.arg1()
             code_writer.write_label(lbl_str)
-            print("\n\nREACHED HERE! :DD\n\n")
 
         elif c_type == "C_GOTO":
             lbl_str = parser.arg1()
