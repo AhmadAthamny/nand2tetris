@@ -23,8 +23,43 @@ def translate_file(
         bootstrap (bool): if this is True, the current file is the 
             first file we are translating.
     """
-    # Your code goes here!
-    pass
+    parser = Parser(input_file)
+    code_writer = CodeWriter(output_file)
+
+    file_name = os.path.basename(input_file.name)[:-3]
+    code_writer.setFileName(file_name)
+
+    while parser.has_more_commands():
+
+        # Move to next command
+        parser.advance()
+        c_type = parser.command_type()
+
+        # In case of arithmetic function
+        if c_type == "C_ARITHMETIC":
+            cmd_text = parser.arg1()
+            code_writer.write_arithmetic(cmd_text)
+
+        # In case of C_PUSH or C_POP
+        elif c_type == "C_PUSH" or c_type == "C_POP":
+            segment = parser.arg1()
+            index = parser.arg2()
+            code_writer.write_push_pop(c_type, segment, int(index))
+
+        # Branching
+        elif c_type == "C_LABEL":
+            lbl_str = parser.arg1()
+            code_writer.write_label(lbl_str)
+            print("\n\nREACHED HERE! :DD\n\n")
+
+        elif c_type == "C_GOTO":
+            lbl_str = parser.arg1()
+            code_writer.write_goto(lbl_str)
+
+        elif c_type == "C_IF":
+            lbl_str = parser.arg1()
+            code_writer.write_if(lbl_str)
+
 
 
 if "__main__" == __name__:
