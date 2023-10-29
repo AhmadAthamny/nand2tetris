@@ -28,6 +28,11 @@ def translate_file(
 
     file_name = os.path.basename(input_file.name)[:-3]
     code_writer.setFileName(file_name)
+    
+    # Add bootstrap code if needed
+    if bootstrap:
+        output_file.write("@256\nD=A\n@SP\nM=D\n")
+        code_writer.write_call("Sys.init", int(0))
 
     while parser.has_more_commands():
 
@@ -58,6 +63,20 @@ def translate_file(
         elif c_type == "C_IF":
             lbl_str = parser.arg1()
             code_writer.write_if(lbl_str)
+
+        # Functions
+        elif c_type == "C_FUNCTION":
+            f_name = parser.arg1()
+            local_vars = int(parser.arg2())
+            code_writer.write_function(f_name, local_vars)
+
+        elif c_type == "C_RETURN":
+            code_writer.write_return()
+        
+        elif c_type == "C_CALL":
+            f_name = parser.arg1()
+            arg_amount = parser.arg2()
+            code_writer.write_call(f_name, arg_amount)
 
 
 

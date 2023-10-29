@@ -329,7 +329,7 @@ class CodeWriter:
         """
         lblname = self.__g_lbl_name(label)
 
-        output += "@" + lblname + "\n"
+        output = "@" + lblname + "\n"
         output += "0;JMP\n"
         
         self.__output_file.write(output)
@@ -373,7 +373,7 @@ class CodeWriter:
 
         # Start local vars to 0
         for i in range(n_vars):
-            output += self.__addConstant(0)
+            output += self.__addConstant(str(0))
         
         self.__output_file.write(output)
     
@@ -410,12 +410,16 @@ class CodeWriter:
         return_lbl = self.__g_lbl_name("returnAddress")
         output = "@" + return_lbl + "\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"  # push label to stack
 
+        print("")
+        print("Current file: " + self.__file_name)
+        print("Current function: " + str(self.__func_name))
+        print("Function name: " + function_name + " | n_args: " + str(n_args))
         # Save the LCL index and push it.
         output += "@LCL\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"  # push LCL
         output += "@ARG\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"  # push ARG
         output += "@THIS\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"  # push THIS
         output += "@THAT\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"  # push THAT
-        output += "@SP\nD=M\n@" + str(n_args + 5) + "\nD=D-A\n@ARG\nM=D\n"  # ARG = SP-5-n_args
+        output += "@SP\nD=M\n@" + str(int(n_args) + 5) + "\nD=D-A\n@ARG\nM=D\n"  # ARG = SP-5-n_args
         output += "@SP\nD=M\n@LCL\nM=D\n"  # LCL = SP
         output += "@" + function_name + "\n0;JMP\n"  # goto the function
         self.__output_file.write(output)  # print current to output file
@@ -437,16 +441,15 @@ class CodeWriter:
         # ARG = *(frame-3)              // restores ARG for the caller
         # LCL = *(frame-4)              // restores LCL for the caller
         # goto return_address           // go to the return address
-        self.__func_name = None
 
         output = "@LCL\nD=M\n@R13\nM=D\n"  # R[13] = LCL (tmp..)
         output += "@R13\nD=M\n@5\nA=D-A\nD=M\n@R14\nM=D\n"  # return_address = *(R[13]-5)
         output += "@SP\nAM=M-1\nD=M\n@ARG\nA=M\nM=D\n"  # *ARG = pop()
         output += "@ARG\nD=M+1\n@SP\nM=D\n"  # SP = ARG + 1
-        output += "@R13\nDM=M-1\n@THAT\nM=D\n"  # THAT = *(R[13]-1), R[13] -= 1
-        output += "@R13\nDM=M-1\n@THIS\nM=D\n"  # THIS = *(R[13]-1), R[13] -= 1
-        output += "@R13\nDM=M-1\n@ARG\nM=D\n"  # ARG = *(R[13]-1), R[13] -= 1
-        output += "@R13\nD=M-1\n@LCL\nM=D\n"  # LCL = *(R[13]-1)
+        output += "@R13\nM=M-1\nA=M\nD=M\n@THAT\nM=D\n"  # THAT = *(R[13]-1), R[13] -= 1
+        output += "@R13\nM=M-1\nA=M\nD=M\n@THIS\nM=D\n"  # THIS = *(R[13]-1), R[13] -= 1
+        output += "@R13\nM=M-1\nA=M\nD=M\n@ARG\nM=D\n"  # ARG = *(R[13]-1), R[13] -= 1
+        output += "@R13\nA=M-1\nD=M\n@LCL\nM=D\n"  # LCL = *(R[13]-1)
         output += "@R14\nA=M\n0;JMP\n"  # goto return_address 
 
         self.__output_file.write(output)  # print current to output file
