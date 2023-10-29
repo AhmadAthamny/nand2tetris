@@ -407,7 +407,8 @@ class CodeWriter:
         # (return_address)      // injects the return address label into the code
 
         # Add the return address label to the stack
-        return_lbl = self.__g_lbl_name("returnAddress")
+        self.__lbl_ctr += 1
+        return_lbl = self.__g_lbl_name("returnAddress") + str(self.__lbl_ctr)
         output = "@" + return_lbl + "\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"  # push label to stack
 
         print("")
@@ -424,7 +425,8 @@ class CodeWriter:
         output += "@" + function_name + "\n0;JMP\n"  # goto the function
         self.__output_file.write(output)  # print current to output file
     
-        self.write_label("returnAddress")  # add the label command to the output file
+        # add the label command to the output file
+        self.__output_file.write("(" + return_lbl + ")\n")  # add the label command to the output file
 
     
     def write_return(self) -> None:
