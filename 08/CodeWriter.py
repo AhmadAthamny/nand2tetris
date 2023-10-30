@@ -411,10 +411,6 @@ class CodeWriter:
         return_lbl = self.__g_lbl_name("returnAddress") + str(self.__lbl_ctr)
         output = "@" + return_lbl + "\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"  # push label to stack
 
-        print("")
-        print("Current file: " + self.__file_name)
-        print("Current function: " + str(self.__func_name))
-        print("Function name: " + function_name + " | n_args: " + str(n_args))
         # Save the LCL index and push it.
         output += "@LCL\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"  # push LCL
         output += "@ARG\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n"  # push ARG
