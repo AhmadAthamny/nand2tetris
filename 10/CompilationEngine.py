@@ -58,8 +58,14 @@ class CompilationEngine:
             val_dict = {"KEYWORD": self.__tokenizer.keyword, "SYMBOL": self.__tokenizer.symbol, 
                         "IDENTIFIER": self.__tokenizer.identifier}
             
-            self.__output_file.write("<" + tag.upper() + "> " + val_dict[tag]() + 
-                                     " </" + tag.upper() + ">" + "\n")
+            # For XML purposes
+            to_output = val_dict[tag]()
+            xml_dict = {"<" : "&lt;", ">" : "&gt;", "&" : "&amp;"}
+            if to_output in list(xml_dict.keys()):
+                to_output = xml_dict[to_output]
+            
+            self.__output_file.write("<" + tag.lower() + "> " + to_output + 
+                                     " </" + tag.lower() + ">" + "\n")
         elif token_type == "INT_CONST":
             val = str(self.__tokenizer.int_val())
             self.__output_file.write("<integerConstant> " + val
@@ -151,9 +157,7 @@ class CompilationEngine:
                 self.__close_bracket("varDec")
 
         # Read subroutine statements.
-        self.__open_bracket("statements")
         self.compile_statements()
-        self.__close_bracket("statements")
 
         self.__eat()  # eat '}'
         self.__close_bracket("subroutineBody")
@@ -186,6 +190,7 @@ class CompilationEngine:
         """Compiles a sequence of statements, not including the enclosing 
         "{}".
         """
+        self.__open_bracket("statements")
         while self.__tokenizer.keyword() in {"do", "let", "while", "return", "if"}:
             keyword = self.__tokenizer.keyword()
 
@@ -203,6 +208,7 @@ class CompilationEngine:
                 
             else:
                 self.compile_if()
+        self.__close_bracket("statements")
 
 
     def compile_do(self) -> None:
@@ -214,17 +220,13 @@ class CompilationEngine:
         self.__close_bracket("doStatement")
 
     def __compile_subroutine_call(self) -> None:
-        print("Subroutine call")
-        print(self.__tokenizer.keyword())
         self.__eat()  # first identifier
 
         # In case it's a method
         if self.__TokenType("SYMBOL") and self.__tokenizer.symbol() == ".":
-            print("It's a method..")
             self.__eat()  # eat symbol
             self.__eat()  # eat subroutine name
         
-        print("Eating opening bracket..")
         self.__eat()  # symbol '('
         self.compile_expression_list()
         self.__eat()  # symbol ')'
@@ -263,7 +265,7 @@ class CompilationEngine:
         self.__open_bracket("returnStatement")
         self.__eat()  # keyword 'return'
 
-        if self.__TokenType("SYMBOL") and self.__tokenizer.symbol() != ';':
+        if not self.__TokenType("SYMBOL") or self.__tokenizer.symbol() != ';':
             self.compile_expression()
 
         self.__eat()  # symbol ';'
@@ -312,8 +314,6 @@ class CompilationEngine:
         self.__open_bracket("term")
         if self.__TokenType("IDENTIFIER"):
             peaked = self.__tokenizer.peek()
-            print("PEAKEDD:", peaked)
-            print(self.__tokenizer.identifier())
             if peaked == '[':
                 self.__eat()  # identifier
                 self.__eat()  # symbol '['

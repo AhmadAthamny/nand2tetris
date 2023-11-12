@@ -324,7 +324,6 @@ class JackTokenizer:
             symbol: '{' | '}' | '(' | ')' | '[' | ']' | '.' | ',' | ';' | '+' | 
               '-' | '*' | '/' | '&' | '|' | '<' | '>' | '=' | '~' | '^' | '#'
         """
-        # Your code goes here!
         token_full = self.__tokens_lines[self.__line_index][self.__token_index]
         first, last = self.__token_range
         token = token_full[first:last+1]
