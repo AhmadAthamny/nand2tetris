@@ -83,7 +83,7 @@ class CompilationEngine:
     def compile_class(self) -> None:
         """Compiles a complete class."""
 
-        self.__open_bracket("class")  # <class>
+        self.__open_bracket("class")  ## <class>
         self.__eat()  # keyword class
         self.__eat()  # identifier className
         self.__eat()  # symbol {
