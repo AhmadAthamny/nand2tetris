@@ -237,14 +237,20 @@ class JackTokenizer:
                             'true' , 'false' , 'null' , 'this' , 'let' , 'do' , 
                             'if' , 'else' , 'while' , 'return'}
             last = -1
+            identifier = False
             for i in range(first+1, len(token)):
+                if token[i] == '_' or token[i].isnumeric():
+                    identifier = True
+                    break
+
                 if token[i].isalpha():
                     continue
                 last = i-1
                 break
+            else:
+                last = len(token)-1
 
-            last = len(token)-1 if last == -1 else last
-            if token[first:last+1] in keyword_dict:
+            if not identifier and token[first:last+1] in keyword_dict:
                 return (first, last)
         
         # identifier
