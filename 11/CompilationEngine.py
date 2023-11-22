@@ -42,13 +42,13 @@ class CompilationEngine:
 
     def __open_bracket(self, tag: str) -> None:
         self.__indentation_print()
-        self.__output_file.write("<" + tag + ">\n")
+        self.__output_file.write("//<" + tag + ">\n")
         self.__indentation_inc()
 
     def __close_bracket(self, tag: str) -> None:
         self.__indentation_dec()
         self.__indentation_print()
-        self.__output_file.write("</" + tag + ">\n")
+        self.__output_file.write("//</" + tag + ">\n")
 
     def __eat(self) -> str:
         """
