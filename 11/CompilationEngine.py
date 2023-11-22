@@ -7,6 +7,7 @@ Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
 """
 import typing
 from JackTokenizer import JackTokenizer
+from SymbolTable import SymbolTable
 
 class CompilationEngine:
     """Gets input from a JackTokenizer and emits its parsed structure into an
@@ -22,7 +23,9 @@ class CompilationEngine:
         """
         self.__output_file = output_stream
         self.__tokenizer = input_stream
+        self.__symbol_table = SymbolTable()
         self.__indentation = 0
+        self.__class_name = None
 
         # Start compiling
         self.__tokenizer.advance()
@@ -47,45 +50,47 @@ class CompilationEngine:
         self.__indentation_print()
         self.__output_file.write("</" + tag + ">\n")
 
-    def __eat(self) -> None:
+    def __eat(self) -> str:
         """
         Advances to next token, prints it, and advances again.
         """
         token_type = self.__tokenizer.token_type()
         self.__indentation_print()
+
+        ret_val = None
+
         if token_type in {"KEYWORD", "SYMBOL", "IDENTIFIER"}:
             tag = token_type
             val_dict = {"KEYWORD": self.__tokenizer.keyword, "SYMBOL": self.__tokenizer.symbol, 
                         "IDENTIFIER": self.__tokenizer.identifier}
-            
-            # For XML purposes
-            to_output = val_dict[tag]()
-            xml_dict = {"<" : "&lt;", ">" : "&gt;", "&" : "&amp;"}
-            if to_output in list(xml_dict.keys()):
-                to_output = xml_dict[to_output]
-            
-            self.__output_file.write("<" + tag.lower() + "> " + to_output + 
-                                     " </" + tag.lower() + ">" + "\n")
+            return_val = tag.lower() 
+        
         elif token_type == "INT_CONST":
             val = str(self.__tokenizer.int_val())
-            self.__output_file.write("<integerConstant> " + val
-                                      + " </integerConstant>" + "\n")
+            return_val = val
         else:
-            self.__output_file.write("<stringConstant> " + self.__tokenizer.string_val() + 
-                                     " </stringConstant>" + "\n")
+            return_val = self.__tokenizer.string_val()
             
         if self.__tokenizer.has_more_tokens():
             self.__tokenizer.advance()
 
+        return return_val
+
     def __TokenType(self, type: str) -> None:
         return self.__tokenizer.token_type() == type
+
+    def __addSymbol(self, name: str, type: str, kind: str):
+        if self.__symbol_table.kind_of(name) is None:
+            self.__symbol_table.define(name, type, kind)
 
     def compile_class(self) -> None:
         """Compiles a complete class."""
 
-        self.__open_bracket("class")  ## <class>
         self.__eat()  # keyword class
-        self.__eat()  # identifier className
+
+        # Save current class name
+        self.__class_name = self.__eat()  # identifier className
+        
         self.__eat()  # symbol {
         
         # Compile field variables.
@@ -94,24 +99,23 @@ class CompilationEngine:
         self.__compile_class_subroutines()
 
         self.__eat() # symbol }
-        self.__close_bracket("class")
 
     def compile_class_var_dec(self) -> None:
         """Compiles a static declaration or a field declaration."""
 
         if self.__TokenType("KEYWORD"):
             while self.__tokenizer.keyword() in {"static", "field"}:
-                self.__open_bracket("classVarDec")
-                self.__eat()  # static/field 
-                self.__eat()  # type
-                self.__eat()  # varName
+                var_kind = self.__eat()  # static/field 
+                var_type = self.__eat()  # type
+                var_name = self.__eat()  # varName
+                self.__addSymbol(var_name, var_type, var_kind)
 
                 while self.__tokenizer.symbol() != ';':
                     self.__eat()  # symbol ,
-                    self.__eat()  # varName
+                    var_name = self.__eat()  # varName
+                    self.__addSymbol(var_name, var_type, var_kind)
                     
                 self.__eat()  # symbol ;
-                self.__close_bracket("classVarDec")
 
     def __compile_class_subroutines(self) -> None:
         # If we don't reach the '}' symbol, then there
