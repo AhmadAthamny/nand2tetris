@@ -35,6 +35,7 @@ class SymbolTable:
             kind (str): the kind of the new identifier, can be:
             "STATIC", "FIELD", "ARG", "VAR".
         """
+        kind = kind.upper()
         new_index = self.var_count(kind)
         if kind in {"STATIC", "FIELD"}:
             self.__class_table[name] = (type, kind, new_index)
