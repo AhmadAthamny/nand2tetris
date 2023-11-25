@@ -8,6 +8,7 @@ Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
 import typing
 from JackTokenizer import JackTokenizer
 from SymbolTable import SymbolTable
+from VMWriter import VMWriter
 
 class CompilationEngine:
     """Gets input from a JackTokenizer and emits its parsed structure into an
@@ -24,6 +25,7 @@ class CompilationEngine:
         self.__output_file = output_stream
         self.__tokenizer = input_stream
         self.__symbol_table = SymbolTable()
+        self.__vmWriter = VMWriter(output_stream)
         self.__indentation = 0
         self.__class_name = None
 
@@ -60,10 +62,9 @@ class CompilationEngine:
         ret_val = None
 
         if token_type in {"KEYWORD", "SYMBOL", "IDENTIFIER"}:
-            tag = token_type
             val_dict = {"KEYWORD": self.__tokenizer.keyword, "SYMBOL": self.__tokenizer.symbol, 
                         "IDENTIFIER": self.__tokenizer.identifier}
-            return_val = tag.lower() 
+            return_val = val_dict[token_type]()
         
         elif token_type == "INT_CONST":
             val = str(self.__tokenizer.int_val())
@@ -83,6 +84,43 @@ class CompilationEngine:
         if self.__symbol_table.kind_of(name) is None:
             self.__symbol_table.define(name, type, kind)
 
+    def __convertOpToVM(self, symbol: str) -> str:
+        output = None
+        if symbol == '+':
+            output = "add"
+        elif symbol == '-':
+            output = "sub"
+        elif symbol == '&':
+            output = "and"
+        elif symbol == '|':
+            output = "or"
+        elif symbol == '=':
+            output == "eq"
+        elif symbol == '>':
+            output = "gt"
+        elif symbol == '<':
+            output = "lt"
+        elif symbol == '*':
+            output = "mult"
+        elif symbol == "/":
+            output = "div"
+        return output
+    
+    def __convertVarToVM(self, var_name: str) -> tuple:
+        kind = self.__symbol_table.kind_of(var_name)
+        index = self.__symbol_table.index_of(var_name)
+        if kind == "FIELD":
+            return "this", str(index)
+        elif kind == "STATIC":
+            return "static", str(index)
+        elif kind == "ARG":
+            return "argument", str(index)
+        elif kind == "VAR":
+            return "local", str(index)
+        
+        # This is an error.
+        return None
+        
     def compile_class(self) -> None:
         """Compiles a complete class."""
 
@@ -130,35 +168,46 @@ class CompilationEngine:
         you will understand why this is necessary in project 11.
         """
         self.__open_bracket("subroutineDec")
-        self.__eat()  # constructor/method/function
+        self.__symbol_table.start_subroutine()
+
+        kind = self.__eat()  # constructor/method/function
         self.__eat()  # type
-        self.__eat()  # subroutine name
+        sub_name = self.__eat()
+        sub_name = self.__class_name + '.' + sub_name # subroutine name
+        print("Function name:",sub_name)
         
-        self.__eat()  # eat '('
+        print("Eating after:",self.__eat())  # eat '('
+        
         self.compile_parameter_list()
         self.__eat()  # eat ')'
 
-        self.__compile_subroutine_body()
+        self.__compile_subroutine_body(sub_name, kind)
+
         self.__close_bracket("subroutineDec")
 
-    def __compile_subroutine_body(self) -> None:
+    def __compile_subroutine_body(self, sub_name:str, kind: str) -> None:
         self.__open_bracket("subroutineBody")
-        self.__eat()  # eat '{'
+        print("first", self.__eat())  # eat '{'
 
+        var_count = 0
         # Read subroutine var dec.
         if self.__TokenType("KEYWORD"):
             while self.__tokenizer.keyword() == "var":
-                self.__open_bracket("varDec")
-                self.__eat()  # var
-                self.__eat()  # type
-                self.__eat()  # varName
+                var_count += self.compile_var_dec()
 
-                while self.__tokenizer.symbol() != ';':
-                    self.__eat()  # symbol ,
-                    self.__eat()  # varName
-                    
-                self.__eat()  # symbol ;
-                self.__close_bracket("varDec")
+        self.__vmWriter.write_function(sub_name, var_count)
+
+        if kind == "constructor":
+            field_count = self.__symbol_table.var_count("FIELD")
+            self.__vmWriter.write_push("constant", field_count)
+            self.__vmWriter.write_call("Memory.alloc", 1)
+            self.__vmWriter.write_pop("pointer", 0)
+
+        elif kind == "method":
+            self.__addSymbol("this", self.__class_name, "ARG")
+            self.__vmWriter.write_push("pointer", 0)
+            self.__vmWriter.write_pop("argument", 0)
+
 
         # Read subroutine statements.
         self.compile_statements()
@@ -174,23 +223,42 @@ class CompilationEngine:
         self.__open_bracket("parameterList")
 
         if self.__TokenType("KEYWORD"):
-            self.__eat()  # type
-            self.__eat()  # parameter name
+            param_type = self.__eat()  # type
+            param_name = self.__eat()  # parameter name
+            self.__addSymbol(param_name, param_type, "ARG")
 
             # Eat more parameters
             while self.__tokenizer.symbol() != ')':
                 self.__eat()  # eat ','
-                self.__eat()  # eat type
-                self.__eat()  # eat identifier
+                param_type = self.__eat()  # eat type
+                param_name = self.__eat()  # eat identifier
+                self.__addSymbol(param_name, param_type, "ARG")
 
         self.__close_bracket("parameterList")
 
-    def compile_var_dec(self) -> None:
+    def compile_var_dec(self) -> int:
         """Compiles a var declaration."""
-        # Your code goes here!
-        pass
+        self.__open_bracket("varDec")
+        self.__eat()  # var
+        var_count = 0
+
+        var_type = self.__eat()  # type
+        var_name = self.__eat()  # varName
+        var_count += 1
+        self.__addSymbol(var_name, var_type, "VAR")
+
+        while self.__tokenizer.symbol() != ';':
+            self.__eat()  # symbol ,
+            var_name = self.__eat()  # varName
+            self.__addSymbol(var_name, var_type, "VAR")
+            var_count += 1
+            
+        self.__eat()  # symbol ;
+        self.__close_bracket("varDec")
+        return var_count
 
     def compile_statements(self) -> None:
+        print("compiling statements")
         """Compiles a sequence of statements, not including the enclosing 
         "{}".
         """
@@ -208,6 +276,7 @@ class CompilationEngine:
                 self.compile_while()
 
             elif keyword == "return":
+                print("okay, calling compile_return()")
                 self.compile_return()
                 
             else:
@@ -221,19 +290,32 @@ class CompilationEngine:
         self.__eat()  # keyword 'do'
         self.__compile_subroutine_call()
         self.__eat()  # symbol ';'
+
+        # remove the placeholder of a void function
+        self.__vmWriter.write_pop("temp", 0)
         self.__close_bracket("doStatement")
 
     def __compile_subroutine_call(self) -> None:
-        self.__eat()  # first identifier
+        subroutine_name = self.__eat()  # first identifier
 
+        expression_count = 0
         # In case it's a method
         if self.__TokenType("SYMBOL") and self.__tokenizer.symbol() == ".":
-            self.__eat()  # eat symbol
-            self.__eat()  # eat subroutine name
+            # Check if it belongs to an object that we have
+            if self.__symbol_table.kind_of(subroutine_name):
+                segment, index = self.__convertVarToVM(subroutine_name)
+                self.__vmWriter.write_push(segment, index)
+                expression_count = 1
+
+            subroutine_name += self.__eat()  # eat symbol
+            subroutine_name += self.__eat()  # eat subroutine name
         
         self.__eat()  # symbol '('
-        self.compile_expression_list()
+        expression_count += self.compile_expression_list()
         self.__eat()  # symbol ')'
+
+        self.__vmWriter.write_call(subroutine_name, expression_count)
+
 
     def compile_let(self) -> None:
         """Compiles a let statement."""
@@ -268,9 +350,15 @@ class CompilationEngine:
         """Compiles a return statement."""
         self.__open_bracket("returnStatement")
         self.__eat()  # keyword 'return'
-
+        print("returning")
         if not self.__TokenType("SYMBOL") or self.__tokenizer.symbol() != ';':
+            print("entered the if statement")
             self.compile_expression()
+        else:
+            # void function
+            self.__vmWriter.write_push("constant", 0)
+
+        self.__vmWriter.write_return()
 
         self.__eat()  # symbol ';'
         self.__close_bracket("returnStatement")
@@ -299,10 +387,16 @@ class CompilationEngine:
         """Compiles an expression."""
         self.__open_bracket("expression")
         self.compile_term()
-        while self.__TokenType("SYMBOL") and \
-            self.__tokenizer.symbol() in {'+', '-', '*', '/', '&', '|', '<', '>', '='}:
+        while self.__TokenType("SYMBOL") and self.__convertOpToVM(self.__tokenizer.symbol()):
+            op = self.__convertOpToVM(self.__tokenizer.symbol())
             self.__eat()  # eat operator
             self.compile_term()
+            if op == "mult":
+                self.__vmWriter.write_call("Math.multiply", 2)
+            elif op == "div":
+                self.__vmWriter.write_call("Math.divide", 2)
+            else:
+                self.__vmWriter.write_arithmetic(op)
         self.__close_bracket("expression")
 
     def compile_term(self) -> None:
@@ -330,37 +424,67 @@ class CompilationEngine:
             
             # normal variable
             else:
-                self.__eat()  # identifier
+                var_name = self.__eat()  # get variable name
+                segment, index = self.__convertVarToVM(var_name)
+                self.__vmWriter.write_push(segment, index)
                               
-        elif self.__TokenType("INT_CONST") or self.__TokenType("STRING_CONST"):
-            self.__eat()  # compile integerConstant or stringConstant
+        elif self.__TokenType("INT_CONST"):
+            const_value = self.__eat()
+            self.__vmWriter.write_push("constant", const_value)
+        
+        elif self.__TokenType("STRING_CONST"):
+            const_str = self.__eat()
+            str_length = len(const_str)
+            self.__vmWriter.write_push("constant", str_length)
+            self.__vmWriter.write_call("String.new", 1)
+            for char in const_str:
+                self.__vmWriter.write_push("constant", ord(char))
+                self.__vmWriter.write_call("String.appendChar", 2)
             
         elif self.__TokenType("KEYWORD"):
-            if self.__tokenizer.keyword() in {"true", "false", "null", "this"}:
-                self.__eat()  # compile keyword
+            if self.__tokenizer.keyword() in {"true", "false", "null"}:
+                keyword = self.__eat()  # compile keyword
+                if keyword == "true":
+                    self.__vmWriter.write_push("constant", 1)
+                    self.__vmWriter.write_arithmetic("neg")
+                elif keyword == "false" or keyword == "null":
+                    self.__vmWriter.write_push("constant", 0)
+                elif keyword == "this":
+                    self.__vmWriter.write_push("pointer", 0)
 
         elif self.__TokenType("SYMBOL"):
-            if self.__tokenizer.symbol() == '(':
+            symbol = self.__tokenizer.symbol()
+            if symbol == '(':
                 self.__eat()  # symbol '('
                 self.compile_expression()
                 self.__eat()  # symbol ')'
 
-            elif self.__tokenizer.symbol() in {"-", "~", "^", "#"}:
+            else:
+                # unary op
+                self.__eat()
+                self.compile_term()
+                symbol_dict = {"-": "neg", "~": "not", "^": "shiftleft", "#": "shiftright"}
                 self.__eat()  # symbol 
-                self.compile_term()  # compile term
+                self.__vmWriter.write_arithmetic(symbol_dict[symbol])
 
 
         self.__close_bracket("term")
 
-    def compile_expression_list(self) -> None:
+    def compile_expression_list(self) -> int:
         """Compiles a (possibly empty) comma-separated list of expressions."""
         self.__open_bracket("expressionList")
-        if not (self.__TokenType("SYMBOL") and self.__tokenizer.symbol() == ')'):
 
+        expressions_count = 0
+
+        if not (self.__TokenType("SYMBOL") and self.__tokenizer.symbol() == ')'):
+            expressions_count += 1
             self.compile_expression()
 
             while self.__TokenType("SYMBOL") and self.__tokenizer.symbol() == ',':
+
+                expressions_count += 1
                 self.__eat()  # eat ','
                 self.compile_expression() 
 
         self.__close_bracket("expressionList")
+        return expressions_count
