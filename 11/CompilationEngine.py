@@ -322,16 +322,36 @@ class CompilationEngine:
         self.__open_bracket("letStatement")
 
         self.__eat()  # keyword 'let'
-        self.__eat()  # identifier 'varName'
+        var_name = self.__eat()  # identifier 'varName'
+
+        segment, index = self.__convertVarToVM(var_name)
+        self.__vmWriter.write_push(segment, index)
+
+        isArray = False
         
         if self.__tokenizer.symbol() == '[':
+            isArray = True
+
             self.__eat()  # symbol '['
             self.compile_expression()
             self.__eat()  # symbol ']'
 
+            self.__vmWriter.write_arithmetic("add")
+
+
         self.__eat()  # eat '='
         self.compile_expression()
         self.__eat()  # eat ';'
+
+
+        if isArray:
+            self.__vmWriter.write_pop("temp", 0)
+            self.__vmWriter.write_pop("pointer", 1)
+            self.__vmWriter.write_push("temp", 0)
+            self.__vmWriter.write_pop("that", 0)
+        else:
+            self.__vmWriter.write_pop(segment, index)
+
         self.__close_bracket("letStatement")
 
     def compile_while(self) -> None:
@@ -413,10 +433,15 @@ class CompilationEngine:
         if self.__TokenType("IDENTIFIER"):
             peaked = self.__tokenizer.peek()
             if peaked == '[':
-                self.__eat()  # identifier
+                var_name = self.__eat()  # identifier
+                segment, index = self.__convertVarToVM(var_name)
+                self.__vmWriter.write_push(segment, index)
                 self.__eat()  # symbol '['
                 self.compile_expression()
-                self.__eat()  # '['
+                self.__eat()  # ']'
+                self.__vmWriter.write_arithmetic("add")
+                self.__vmWriter.write_pop("pointer", 1)
+                self.__vmWriter.write_push("that", 0)
 
             # calling a subroutine (method)
             elif peaked in {".", "("}:
