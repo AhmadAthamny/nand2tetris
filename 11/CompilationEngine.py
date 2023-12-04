@@ -331,6 +331,7 @@ class CompilationEngine:
         if self.__tokenizer.symbol() == '[':
             isArray = True
 
+            self.__vmWriter.write_push(segment, index)
             self.__eat()  # symbol '['
             self.compile_expression()
             self.__eat()  # symbol ']'
