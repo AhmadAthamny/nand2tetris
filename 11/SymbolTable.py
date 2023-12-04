@@ -77,7 +77,7 @@ class SymbolTable:
             
         for identifier in self.__subroutine_table.keys():
             if identifier == name:
-                return self.__class_table[identifier][1]
+                return self.__subroutine_table[identifier][1]
             
         return None
 
@@ -95,7 +95,7 @@ class SymbolTable:
             
         for identifier in self.__subroutine_table.keys():
             if identifier == name:
-                return self.__class_table[identifier][0]
+                return self.__subroutine_table[identifier][0]
             
         return None
 
@@ -113,6 +113,6 @@ class SymbolTable:
             
         for identifier in self.__subroutine_table.keys():
             if identifier == name:
-                return self.__class_table[identifier][2]
+                return self.__subroutine_table[identifier][2]
             
         return None
