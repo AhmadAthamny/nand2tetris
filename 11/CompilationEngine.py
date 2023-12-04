@@ -325,7 +325,6 @@ class CompilationEngine:
         var_name = self.__eat()  # identifier 'varName'
 
         segment, index = self.__convertVarToVM(var_name)
-        self.__vmWriter.write_push(segment, index)
 
         isArray = False
         
@@ -488,8 +487,8 @@ class CompilationEngine:
                 self.__vmWriter.write_call("String.appendChar", 2)
             
         elif self.__TokenType("KEYWORD"):
-            if self.__tokenizer.keyword() in {"true", "false", "null"}:
-                keyword = self.__eat()  # compile keyword
+            if self.__tokenizer.keyword() in {"true", "false", "null", "this"}:
+                keyword = self.__eat()  # eat keyword
                 if keyword == "true":
                     self.__vmWriter.write_push("constant", 1)
                     self.__vmWriter.write_arithmetic("neg")
