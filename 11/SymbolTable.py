@@ -17,6 +17,7 @@ class SymbolTable:
     def __init__(self) -> None:
         """Creates a new empty symbol table."""
         self.__class_table = dict()
+        self.__subroutine_table = dict()
 
     def start_subroutine(self) -> None:
         """Starts a new subroutine scope (i.e., resets the subroutine's 
