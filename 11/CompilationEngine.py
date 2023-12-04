@@ -42,7 +42,8 @@ class CompilationEngine:
         self.__indentation -= 2
 
     def __indentation_print(self) -> None:
-        self.__output_file.write(" " * self.__indentation)
+        #self.__output_file.write(" " * self.__indentation)
+        pass
 
     def __open_bracket(self, tag: str) -> None:
         self.__indentation_print()
@@ -373,6 +374,9 @@ class CompilationEngine:
         self.compile_statements()
         self.__vmWriter.write_goto("while" + str(while_ctr))
         self.__eat()  # symbol '}'
+
+        # Write the label which is after the while
+        self.__vmWriter.write_label("while_end" + str(while_ctr))
 
         self.__close_bracket("whileStatement")
 
