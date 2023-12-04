@@ -176,9 +176,8 @@ class CompilationEngine:
         self.__eat()  # type
         sub_name = self.__eat()
         sub_name = self.__class_name + '.' + sub_name # subroutine name
-        print("Function name:",sub_name)
         
-        print("Eating after:",self.__eat())  # eat '('
+        self.__eat()  # eat '('
         
         self.compile_parameter_list()
         self.__eat()  # eat ')'
@@ -189,7 +188,7 @@ class CompilationEngine:
 
     def __compile_subroutine_body(self, sub_name:str, kind: str) -> None:
         self.__open_bracket("subroutineBody")
-        print("first", self.__eat())  # eat '{'
+        self.__eat()  # eat '{'
 
         var_count = 0
         # Read subroutine var dec.
@@ -260,7 +259,6 @@ class CompilationEngine:
         return var_count
 
     def compile_statements(self) -> None:
-        print("compiling statements")
         """Compiles a sequence of statements, not including the enclosing 
         "{}".
         """
@@ -278,7 +276,6 @@ class CompilationEngine:
                 self.compile_while()
 
             elif keyword == "return":
-                print("okay, calling compile_return()")
                 self.compile_return()
                 
             else:
@@ -383,9 +380,7 @@ class CompilationEngine:
         """Compiles a return statement."""
         self.__open_bracket("returnStatement")
         self.__eat()  # keyword 'return'
-        print("returning")
         if not self.__TokenType("SYMBOL") or self.__tokenizer.symbol() != ';':
-            print("entered the if statement")
             self.compile_expression()
         else:
             # void function
