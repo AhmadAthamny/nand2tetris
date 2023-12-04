@@ -29,6 +29,8 @@ class CompilationEngine:
         self.__indentation = 0
         self.__class_name = None
 
+        self.__lbl_counter = 0
+
         # Start compiling
         self.__tokenizer.advance()
         self.compile_class()
@@ -95,7 +97,7 @@ class CompilationEngine:
         elif symbol == '|':
             output = "or"
         elif symbol == '=':
-            output == "eq"
+            output = "eq"
         elif symbol == '>':
             output = "gt"
         elif symbol == '<':
@@ -358,12 +360,23 @@ class CompilationEngine:
         """Compiles a while statement."""
         self.__open_bracket("whileStatement")
         self.__eat()  # keyword 'while'
+        self.__lbl_counter += 1
+        while_ctr = self.__lbl_counter
+        self.__vmWriter.write_label("while" + str(while_ctr))
+
+        # Check if the condition is true
         self.__eat()  # symbol '('
         self.compile_expression()
+        self.__vmWriter.write_arithmetic("not")
+        self.__vmWriter.write_if("while_end" + str(while_ctr))
         self.__eat()  # symbol ')'
+
+        # Perform the statements, then go back to the while label again.
         self.__eat()  # symbol '{'
         self.compile_statements()
+        self.__vmWriter.write_goto("while" + str(while_ctr))
         self.__eat()  # symbol '}'
+
         self.__close_bracket("whileStatement")
 
     def compile_return(self) -> None:
@@ -391,16 +404,25 @@ class CompilationEngine:
         self.__eat()  # symbol '('
         self.compile_expression()
         self.__eat()  # symbol ')'
+
+
+        self.__vmWriter.write_arithmetic("not")
+        self.__lbl_counter += 1
+        if_ctr = self.__lbl_counter
+        self.__vmWriter.write_if("else_lbl" + str(if_ctr))
         self.__eat()  # symbol '{'
         self.compile_statements()
         self.__eat()  # symbol '}'
+        self.__vmWriter.write_goto("if_done" + str(if_ctr))
 
+        self.__vmWriter.write_label("else_lbl" + str(if_ctr))
         if self.__TokenType("KEYWORD") and self.__tokenizer.keyword() == "else":
             self.__eat()  # keyword else
             self.__eat()  # symbol '{'
             self.compile_statements()
             self.__eat()  # symbol '}'
 
+        self.__vmWriter.write_label("if_done" + str(if_ctr))
         self.__close_bracket("ifStatement")
 
     def compile_expression(self) -> None:
@@ -489,7 +511,6 @@ class CompilationEngine:
                 self.__eat()
                 self.compile_term()
                 symbol_dict = {"-": "neg", "~": "not", "^": "shiftleft", "#": "shiftright"}
-                self.__eat()  # symbol 
                 self.__vmWriter.write_arithmetic(symbol_dict[symbol])
 
 
