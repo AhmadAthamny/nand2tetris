@@ -331,7 +331,6 @@ class CompilationEngine:
         self.__eat()  # keyword 'let'
         var_name = self.__eat()  # identifier 'varName'
 
-        print("Check var_name..", var_name)
         segment, index = self.__convertVarToVM(var_name)
 
         isArray = False
