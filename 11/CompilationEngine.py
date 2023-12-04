@@ -47,13 +47,13 @@ class CompilationEngine:
 
     def __open_bracket(self, tag: str) -> None:
         self.__indentation_print()
-        self.__output_file.write("//<" + tag + ">\n")
+        #self.__output_file.write("//<" + tag + ">\n")
         self.__indentation_inc()
 
     def __close_bracket(self, tag: str) -> None:
         self.__indentation_dec()
         self.__indentation_print()
-        self.__output_file.write("//</" + tag + ">\n")
+        #self.__output_file.write("//</" + tag + ">\n")
 
     def __eat(self) -> str:
         """
@@ -207,8 +207,8 @@ class CompilationEngine:
 
         elif kind == "method":
             self.__addSymbol("this", self.__class_name, "ARG")
-            self.__vmWriter.write_push("pointer", 0)
-            self.__vmWriter.write_pop("argument", 0)
+            self.__vmWriter.write_push("argument", 0)
+            self.__vmWriter.write_pop("pointer", 0)
 
 
         # Read subroutine statements.
@@ -224,7 +224,7 @@ class CompilationEngine:
         # Open bracket in any case, even if there are no parameters.
         self.__open_bracket("parameterList")
 
-        if self.__TokenType("KEYWORD"):
+        if self.__TokenType("KEYWORD") or self.__TokenType("IDENTIFIER"):
             param_type = self.__eat()  # type
             param_name = self.__eat()  # parameter name
             self.__addSymbol(param_name, param_type, "ARG")
@@ -307,8 +307,15 @@ class CompilationEngine:
                 self.__vmWriter.write_push(segment, index)
                 expression_count = 1
 
+                # The subroutine call now starts with the name of the class of the object
+                subroutine_name = self.__symbol_table.type_of(subroutine_name)
+
             subroutine_name += self.__eat()  # eat symbol
             subroutine_name += self.__eat()  # eat subroutine name
+        else:
+            self.__vmWriter.write_push("pointer", 0)
+            subroutine_name = self.__class_name + '.' + subroutine_name
+            expression_count = 1
         
         self.__eat()  # symbol '('
         expression_count += self.compile_expression_list()
@@ -324,6 +331,7 @@ class CompilationEngine:
         self.__eat()  # keyword 'let'
         var_name = self.__eat()  # identifier 'varName'
 
+        print("Check var_name..", var_name)
         segment, index = self.__convertVarToVM(var_name)
 
         isArray = False
