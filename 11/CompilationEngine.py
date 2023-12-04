@@ -180,7 +180,11 @@ class CompilationEngine:
         
         self.__eat()  # eat '('
         
+        # Before adding params, make sure we add the 'this' argument first.
+        if kind == "method":
+            self.__addSymbol("this", self.__class_name, "ARG")
         self.compile_parameter_list()
+
         self.__eat()  # eat ')'
 
         self.__compile_subroutine_body(sub_name, kind)
@@ -206,10 +210,8 @@ class CompilationEngine:
             self.__vmWriter.write_pop("pointer", 0)
 
         elif kind == "method":
-            self.__addSymbol("this", self.__class_name, "ARG")
             self.__vmWriter.write_push("argument", 0)
             self.__vmWriter.write_pop("pointer", 0)
-
 
         # Read subroutine statements.
         self.compile_statements()
