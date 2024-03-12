@@ -170,15 +170,34 @@ class JackTokenizer:
                     continue
 
                 if comment_multi_line:
-                    if token.find("*/") != -1:
+                    comment_ending = token.find("*/")
+                    if comment_ending != -1:
                         comment_multi_line = False
+                        
+                        # move to next token properly
+                        if comment_ending != len(token)-2:
+                            self.__tokens_lines[tmp_line].insert(tmp_token+1, token[comment_ending+2:])
+                            self.__tokens_lines[tmp_line][tmp_token] = token[:comment_ending+2]
+
                     tmp_token += 1
+                    continue
+
+                comment_starting1 = token.find("/*")
+                if comment_starting1 > 0:
+                    self.__tokens_lines[tmp_line].insert(tmp_token+1, token[comment_starting1:])
+                    self.__tokens_lines[tmp_line][tmp_token] = token[:comment_starting1]
+                    continue
+
+                comment_starting2 = token.find("//")
+                if comment_starting2 > 0:
+                    self.__tokens_lines[tmp_line].insert(tmp_token+1, token[comment_starting2:])
+                    self.__tokens_lines[tmp_line][tmp_token] = token[:comment_starting2]
                     continue
 
                 # In this case, we are starting a multi-line comment
                 # We set the proper flag to 'True', and start looking 
                 # for the closing '*/'
-                if token[:2] == "/*":
+                if token[:2] == "/*" or token[:3] == "/**":
                     comment_multi_line = True
                     tmp_token += 1
                     continue
