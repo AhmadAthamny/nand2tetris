@@ -181,18 +181,19 @@ class JackTokenizer:
 
                     tmp_token += 1
                     continue
+                
+                if token[0] != '"':
+                    comment_starting1 = token.find("/*")
+                    if comment_starting1 > 0:
+                        self.__tokens_lines[tmp_line].insert(tmp_token+1, token[comment_starting1:])
+                        self.__tokens_lines[tmp_line][tmp_token] = token[:comment_starting1]
+                        continue
 
-                comment_starting1 = token.find("/*")
-                if comment_starting1 > 0:
-                    self.__tokens_lines[tmp_line].insert(tmp_token+1, token[comment_starting1:])
-                    self.__tokens_lines[tmp_line][tmp_token] = token[:comment_starting1]
-                    continue
-
-                comment_starting2 = token.find("//")
-                if comment_starting2 > 0:
-                    self.__tokens_lines[tmp_line].insert(tmp_token+1, token[comment_starting2:])
-                    self.__tokens_lines[tmp_line][tmp_token] = token[:comment_starting2]
-                    continue
+                    comment_starting2 = token.find("//")
+                    if comment_starting2 > 0:
+                        self.__tokens_lines[tmp_line].insert(tmp_token+1, token[comment_starting2:])
+                        self.__tokens_lines[tmp_line][tmp_token] = token[:comment_starting2]
+                        continue
 
                 # In this case, we are starting a multi-line comment
                 # We set the proper flag to 'True', and start looking 
