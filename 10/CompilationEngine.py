@@ -169,7 +169,7 @@ class CompilationEngine:
         # Open bracket in any case, even if there are no parameters.
         self.__open_bracket("parameterList")
 
-        if self.__TokenType("KEYWORD"):
+        if self.__TokenType("KEYWORD") or self.__TokenType("IDENTIFIER"):
             self.__eat()  # type
             self.__eat()  # parameter name
 
